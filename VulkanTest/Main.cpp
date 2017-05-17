@@ -1,7 +1,5 @@
 #include "HelloTriangleApplication.h"
 
-#include <GLFW\glfw3.h>
-
 
 int main() {
 	HelloTriangleApplication app;

@@ -73,6 +73,7 @@ private:
 	void GetRequiredExtensions(std::vector<const char*>* extensions);
 	void CreateInstance();
 	void PickPhysicalDevice();
+	void CreateLogicalDevice();
 
 private:
 	GLFWwindow* window_;
@@ -80,4 +81,6 @@ private:
 	VkInstance instance_;
 	VkDebugReportCallbackEXT callback_;
 	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+	VkDevice device_;
+	VkQueue graphicsQueue;
 };

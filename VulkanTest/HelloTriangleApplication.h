@@ -28,6 +28,12 @@ public:
 	void Run();
 
 private:
+	struct QueueFamilyIndices {
+		int graphicsFamily = -1;
+		bool IsComplete() { return graphicsFamily >= 0; }
+	};
+
+private:
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objType,
@@ -60,14 +66,18 @@ private:
 	void Cleanup();
 
 	bool CheckValidationLayerSupport();
+	bool IsDeviceSuitable(VkPhysicalDevice device);
+	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 
 	void SetupDebugCallback();
-	std::vector<const char*> GetRequiredExtensions();
+	void GetRequiredExtensions(std::vector<const char*>* extensions);
 	void CreateInstance();
+	void PickPhysicalDevice();
 
 private:
 	GLFWwindow* window_;
 
 	VkInstance instance_;
 	VkDebugReportCallbackEXT callback_;
+	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 };

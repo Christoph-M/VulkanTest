@@ -20,6 +20,7 @@ void HelloTriangleApplication::InitWindow() {
 void HelloTriangleApplication::InitVulkan() {
 	this->CreateInstance();
 	this->SetupDebugCallback();
+	this->PickPhysicalDevice();
 }
 
 void HelloTriangleApplication::MainLoop() {
@@ -68,6 +69,32 @@ bool HelloTriangleApplication::CheckValidationLayerSupport() {
 	return true;
 }
 
+bool HelloTriangleApplication::IsDeviceSuitable(VkPhysicalDevice device) {
+	VkPhysicalDeviceProperties deviceProperties;
+	VkPhysicalDeviceFeatures deviceFeatures;
+	vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+	QueueFamilyIndices indices = this->FindQueueFamilies(device);
+
+	return indices.IsComplete();
+}
+
+HelloTriangleApplication::QueueFamilyIndices HelloTriangleApplication::FindQueueFamilies(VkPhysicalDevice device) {
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	for (int i = 0; i < queueFamilies.size(); ++i) {
+		if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) indices.graphicsFamily = i;
+		if (indices.IsComplete()) break;
+	}
+
+	return indices;
+}
+
 
 void HelloTriangleApplication::SetupDebugCallback() {
 	if (!enableValidationLayers) return;
@@ -84,17 +111,13 @@ void HelloTriangleApplication::SetupDebugCallback() {
 }
 
 
-std::vector<const char*> HelloTriangleApplication::GetRequiredExtensions() {
-	std::vector<const char*> extensions;
-
+void HelloTriangleApplication::GetRequiredExtensions(std::vector<const char*>* extensions) {
 	unsigned int glfwExtensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-	for (unsigned int i = 0; i < glfwExtensionCount; ++i) extensions.push_back(glfwExtensions[i]);
+	for (unsigned int i = 0; i < glfwExtensionCount; ++i) extensions->push_back(glfwExtensions[i]);
 
-	if (enableValidationLayers) extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-
-	return extensions;
+	if (enableValidationLayers) extensions->push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 }
 
 
@@ -109,7 +132,8 @@ void HelloTriangleApplication::CreateInstance() {
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
-	std::vector<const char*> requiredExtensions = this->GetRequiredExtensions();
+	std::vector<const char*> requiredExtensions;
+	this->GetRequiredExtensions(&requiredExtensions);
 
 	VkInstanceCreateInfo createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -153,4 +177,21 @@ void HelloTriangleApplication::CreateInstance() {
 			throw std::runtime_error("Required extension not supported!");
 		}
 	}
+}
+
+void HelloTriangleApplication::PickPhysicalDevice() {
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance_, &deviceCount, nullptr);
+	if (deviceCount == 0) throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance_, &deviceCount, devices.data());
+
+	for (const auto& device : devices) {
+		if (this->IsDeviceSuitable(device)) {
+			physicalDevice_ = device;
+			break;
+		}
+	}
+
+	if (physicalDevice_ == VK_NULL_HANDLE) throw std::runtime_error("Failed to find suitable GPU!");
 }

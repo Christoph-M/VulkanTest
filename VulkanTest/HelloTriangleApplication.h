@@ -12,6 +12,10 @@
 const int WIDTH = 800;
 const int HEIGHT = 600;
 
+const std::vector<const char*> deviceExtensions = {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_LUNARG_standard_validation"
 };
@@ -32,6 +36,12 @@ private:
 		int graphicsFamily = -1;
 		int presentFamily = -1;
 		bool IsComplete() { return graphicsFamily >= 0 && presentFamily >= 0; }
+	};
+
+	struct SwapChainSupportDetails {
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
 	};
 
 private:
@@ -69,13 +79,19 @@ private:
 	bool CheckValidationLayerSupport();
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
+	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	void SetupDebugCallback();
 	void CreateSurface();
-	void GetRequiredExtensions(std::vector<const char*>* extensions);
+	void GetRequiredExtensions(std::vector<const char*>& extensions);
 	void CreateInstance();
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
+	void CreateSwapChain();
 
 private:
 	GLFWwindow* window_;
@@ -85,6 +101,10 @@ private:
 	VkSurfaceKHR surface_;
 	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 	VkDevice device_;
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+	VkQueue graphicsQueue_;
+	VkQueue presentQueue_;
+	VkSwapchainKHR swapchain_;
+	std::vector<VkImage> swapChainImages_;
+	VkFormat swapChainImageFormat_;
+	VkExtent2D swapChainExtent_;
 };

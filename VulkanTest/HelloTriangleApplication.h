@@ -92,6 +92,7 @@ private:
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
 	void CreateSwapChain();
+	void CreateImageViews();
 
 private:
 	GLFWwindow* window_;
@@ -107,4 +108,5 @@ private:
 	std::vector<VkImage> swapChainImages_;
 	VkFormat swapChainImageFormat_;
 	VkExtent2D swapChainExtent_;
+	std::vector<VkImageView> swapChainImageViews_;
 };

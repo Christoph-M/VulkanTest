@@ -30,7 +30,8 @@ public:
 private:
 	struct QueueFamilyIndices {
 		int graphicsFamily = -1;
-		bool IsComplete() { return graphicsFamily >= 0; }
+		int presentFamily = -1;
+		bool IsComplete() { return graphicsFamily >= 0 && presentFamily >= 0; }
 	};
 
 private:
@@ -70,6 +71,7 @@ private:
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 
 	void SetupDebugCallback();
+	void CreateSurface();
 	void GetRequiredExtensions(std::vector<const char*>* extensions);
 	void CreateInstance();
 	void PickPhysicalDevice();
@@ -80,7 +82,9 @@ private:
 
 	VkInstance instance_;
 	VkDebugReportCallbackEXT callback_;
+	VkSurfaceKHR surface_;
 	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 	VkDevice device_;
 	VkQueue graphicsQueue;
+	VkQueue presentQueue;
 };

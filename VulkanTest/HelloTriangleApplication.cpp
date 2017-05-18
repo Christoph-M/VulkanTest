@@ -1,5 +1,7 @@
 #include "HelloTriangleApplication.h"
 
+#include <set>
+
 
 void HelloTriangleApplication::Run() {
 	this->InitWindow();
@@ -16,10 +18,10 @@ void HelloTriangleApplication::InitWindow() {
 	window_ = glfwCreateWindow(WIDTH, HEIGHT, "VulkanTest", nullptr, nullptr);
 }
 
-
 void HelloTriangleApplication::InitVulkan() {
 	this->CreateInstance();
 	this->SetupDebugCallback();
+	this->CreateSurface();
 	this->PickPhysicalDevice();
 	this->CreateLogicalDevice();
 }
@@ -33,6 +35,7 @@ void HelloTriangleApplication::MainLoop() {
 void HelloTriangleApplication::Cleanup() {
 	vkDestroyDevice(device_, nullptr);
 	DestroyDebugReportCallbackEXT(instance_, callback_, nullptr);
+	vkDestroySurfaceKHR(instance_, surface_, nullptr);
 	vkDestroyInstance(instance_, nullptr);
 	glfwDestroyWindow(window_);
 	glfwTerminate();
@@ -91,6 +94,11 @@ HelloTriangleApplication::QueueFamilyIndices HelloTriangleApplication::FindQueue
 
 	for (int i = 0; i < queueFamilies.size(); ++i) {
 		if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) indices.graphicsFamily = i;
+
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &presentSupport);
+		if (queueFamilies[i].queueCount > 0 && presentSupport) indices.presentFamily = i;
+
 		if (indices.IsComplete()) break;
 	}
 
@@ -112,6 +120,11 @@ void HelloTriangleApplication::SetupDebugCallback() {
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to set up debug callback!");
 }
 
+void HelloTriangleApplication::CreateSurface() {
+	VkResult result = glfwCreateWindowSurface(instance_, window_, nullptr, &surface_);
+	printf("glfwCreateWindowSurface result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create window surface!");
+}
 
 void HelloTriangleApplication::GetRequiredExtensions(std::vector<const char*>* extensions) {
 	unsigned int glfwExtensionCount = 0;
@@ -121,7 +134,6 @@ void HelloTriangleApplication::GetRequiredExtensions(std::vector<const char*>* e
 
 	if (enableValidationLayers) extensions->push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 }
-
 
 void HelloTriangleApplication::CreateInstance() {
 	if (enableValidationLayers && !this->CheckValidationLayerSupport()) throw std::runtime_error("Required validation layer not supported!");
@@ -201,19 +213,25 @@ void HelloTriangleApplication::PickPhysicalDevice() {
 void HelloTriangleApplication::CreateLogicalDevice() {
 	QueueFamilyIndices indices = this->FindQueueFamilies(physicalDevice_);
 
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+
 	float queuePriority = 1.0f;
-	VkDeviceQueueCreateInfo queueCreateInfo = { };
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
-	queueCreateInfo.queueCount = 1;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	for (int queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo = { };
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 
 	VkPhysicalDeviceFeatures deviceFeatures = { };
 
 	VkDeviceCreateInfo createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.queueCreateInfoCount = 1;
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = 0;
 	if (enableValidationLayers) {
@@ -228,4 +246,5 @@ void HelloTriangleApplication::CreateLogicalDevice() {
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create logical device!");
 
 	vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue);
+	vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue);
 }

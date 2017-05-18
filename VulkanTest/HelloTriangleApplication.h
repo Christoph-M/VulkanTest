@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <functional>
 #include <vector>
+#include <fstream>
 
 
 const int WIDTH = 800;
@@ -70,6 +71,18 @@ private:
 		if (func) func(instance, callback, pAllocator);
 	}
 
+	static void ReadFile(const std::string& filename, std::vector<char>& buffer) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+		if (!file.is_open()) throw std::runtime_error("Failed to open file!");
+
+		size_t fileSize = static_cast<size_t>(file.tellg());
+		buffer.resize(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+		file.close();
+	}
+
 private:
 	void InitWindow();
 	void InitVulkan();
@@ -84,6 +97,7 @@ private:
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 
 	void SetupDebugCallback();
 	void CreateSurface();
@@ -93,6 +107,7 @@ private:
 	void CreateLogicalDevice();
 	void CreateSwapChain();
 	void CreateImageViews();
+	void CreateGraphicsPipeline();
 
 private:
 	GLFWwindow* window_;

@@ -1,7 +1,6 @@
 #include "HelloTriangleApplication.h"
 
 #include <set>
-#include <string>
 #include <algorithm>
 
 
@@ -28,6 +27,7 @@ void HelloTriangleApplication::InitVulkan() {
 	this->CreateLogicalDevice();
 	this->CreateSwapChain();
 	this->CreateImageViews();
+	this->CreateGraphicsPipeline();
 }
 
 void HelloTriangleApplication::MainLoop() {
@@ -202,6 +202,23 @@ VkExtent2D HelloTriangleApplication::ChooseSwapExtent(const VkSurfaceCapabilitie
 	return actualExtent;
 }
 
+VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& code) {
+	std::vector<uint32_t> codeAligned(code.size() / sizeof(uint32_t) + 1);
+	memcpy(codeAligned.data(), code.data(), code.size());
+
+	VkShaderModuleCreateInfo createInfo = { };
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode = codeAligned.data();
+
+	VkShaderModule shaderModule;
+	VkResult result = vkCreateShaderModule(device_, &createInfo, nullptr, &shaderModule);
+	printf("vkCreateShaderModule result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create shader module!");
+
+	return shaderModule;
+}
+
 
 void HelloTriangleApplication::SetupDebugCallback() {
 	if (!enableValidationLayers) return;
@@ -359,7 +376,7 @@ void HelloTriangleApplication::CreateSwapChain() {
 	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) imageCount = swapChainSupport.capabilities.maxImageCount;
 
 	QueueFamilyIndices indices = this->FindQueueFamilies(physicalDevice_);
-	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+	uint32_t queueFamilyIndices[] = { static_cast<uint32_t>(indices.graphicsFamily), static_cast<uint32_t>(indices.presentFamily) };
 
 	VkSwapchainCreateInfoKHR createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -416,7 +433,35 @@ void HelloTriangleApplication::CreateImageViews() {
 		createInfo.subresourceRange.layerCount = 1;
 
 		VkResult result = vkCreateImageView(device_, &createInfo, nullptr, &swapChainImageViews_[i]);
-		printf("vkCreateImageView %d result: %d\n", (int)i, result);
+		printf("vkCreateImageView %d result: %d\n", static_cast<int>(i), result);
 		if (result != VK_SUCCESS) throw std::runtime_error("Failed to create image views!");
 	}
+}
+
+void HelloTriangleApplication::CreateGraphicsPipeline() {
+	std::vector<char> vertShaderCode, fragShaderCode;
+	this->ReadFile("CompiledShaders/vert.spv", vertShaderCode);
+	this->ReadFile("CompiledShaders/frag.spv", fragShaderCode);
+	printf("vertShaderCode size: %d\n", static_cast<int>(vertShaderCode.size()));
+	printf("fragShaderCode size: %d\n", static_cast<int>(fragShaderCode.size()));
+
+	VkShaderModule vertShaderModule = this->CreateShaderModule(vertShaderCode);
+	VkShaderModule fragShaderModule = this->CreateShaderModule(fragShaderCode);
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo = { };
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo = { };
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+	vkDestroyShaderModule(device_, fragShaderModule, nullptr);
+	vkDestroyShaderModule(device_, vertShaderModule, nullptr);
 }

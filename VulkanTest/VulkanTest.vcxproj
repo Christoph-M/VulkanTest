@@ -98,8 +98,7 @@
       </Command>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>"$(ProjectDir)Shaders\compile.bat"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>

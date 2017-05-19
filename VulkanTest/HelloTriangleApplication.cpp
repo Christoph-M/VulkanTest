@@ -670,4 +670,32 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 	VkResult result = vkAllocateCommandBuffers(device_, &allocateInfo, commandBuffers_.data());
 	printf("vkAllocateCommandBuffers result: %d\n", result);
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create command buffers!");
+
+	for (size_t i = 0; i < commandBuffers_.size(); ++i) {
+		VkCommandBufferBeginInfo beginInfo = { };
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		beginInfo.pInheritanceInfo = nullptr;
+
+		vkBeginCommandBuffer(commandBuffers_[i], &beginInfo);
+
+		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+		VkRenderPassBeginInfo renderPassInfo = { };
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = renderPass_;
+		renderPassInfo.framebuffer = swapChainFramebuffers_[i];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent_;
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+
+		vkCmdBeginRenderPass(commandBuffers_[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindPipeline(commandBuffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
+		vkCmdDraw(commandBuffers_[i], 3, 1, 0, 0);
+		vkCmdEndRenderPass(commandBuffers_[i]);
+
+		result = vkEndCommandBuffer(commandBuffers_[i]);
+		printf("vkEndCommandBuffer %d result: %d\n", static_cast<int>(i), result);
+		if (result != VK_SUCCESS) throw std::runtime_error("Failed to record command buffer!");
+	}
 }

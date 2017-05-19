@@ -30,6 +30,8 @@ void HelloTriangleApplication::InitVulkan() {
 	this->CreateRenderPass();
 	this->CreateGraphicsPipeline();
 	this->CreateFramebuffers();
+	this->CreateCommandPool();
+	this->CreateCommandBuffers();
 }
 
 void HelloTriangleApplication::MainLoop() {
@@ -39,6 +41,7 @@ void HelloTriangleApplication::MainLoop() {
 }
 
 void HelloTriangleApplication::Cleanup() {
+	vkDestroyCommandPool(device_, commandPool_, nullptr);
 	for (size_t i = 0; i < swapChainFramebuffers_.size(); ++i) vkDestroyFramebuffer(device_, swapChainFramebuffers_[i], nullptr);
 	vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
 	vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
@@ -640,4 +643,31 @@ void HelloTriangleApplication::CreateFramebuffers() {
 		printf("vkCreateFramebuffer %d result: %d\n", static_cast<int>(i), result);
 		if (result != VK_SUCCESS) throw std::runtime_error("Failed to create framebuffer!");
 	}
+}
+
+void HelloTriangleApplication::CreateCommandPool() {
+	QueueFamilyIndices queueFamilyIndices = this->FindQueueFamilies(physicalDevice_);
+
+	VkCommandPoolCreateInfo poolInfo = { };
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.flags = 0;
+
+	VkResult result = vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool_);
+	printf("vkCreateCommandPool result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create command pool!");
+}
+
+void HelloTriangleApplication::CreateCommandBuffers() {
+	commandBuffers_.resize(swapChainFramebuffers_.size());
+
+	VkCommandBufferAllocateInfo allocateInfo = { };
+	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.commandPool = commandPool_;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
+
+	VkResult result = vkAllocateCommandBuffers(device_, &allocateInfo, commandBuffers_.data());
+	printf("vkAllocateCommandBuffers result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create command buffers!");
 }

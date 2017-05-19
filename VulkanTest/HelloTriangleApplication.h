@@ -110,6 +110,8 @@ private:
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
+	void CreateCommandPool();
+	void CreateCommandBuffers();
 
 private:
 	GLFWwindow* window_;
@@ -130,4 +132,6 @@ private:
 	VkPipelineLayout pipelineLayout_;
 	VkPipeline graphicsPipeline_;
 	std::vector<VkFramebuffer> swapChainFramebuffers_;
+	VkCommandPool commandPool_;
+	std::vector<VkCommandBuffer> commandBuffers_;
 };

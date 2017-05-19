@@ -15,8 +15,9 @@ void HelloTriangleApplication::Run() {
 void HelloTriangleApplication::InitWindow() {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	window_ = glfwCreateWindow(WIDTH, HEIGHT, "VulkanTest", nullptr, nullptr);
+	glfwSetWindowUserPointer(window_, this);
+	glfwSetWindowSizeCallback(window_, HelloTriangleApplication::OnWindowResized);
 }
 
 void HelloTriangleApplication::InitVulkan() {
@@ -44,16 +45,21 @@ void HelloTriangleApplication::MainLoop() {
 	vkDeviceWaitIdle(device_);
 }
 
-void HelloTriangleApplication::Cleanup() {
-	vkDestroySemaphore(device_, renderFinishedSemaphore_, nullptr);
-	vkDestroySemaphore(device_, imageAvailableSemaphore_, nullptr);
-	vkDestroyCommandPool(device_, commandPool_, nullptr);
+void HelloTriangleApplication::CleanupSwapChain() {
 	for (size_t i = 0; i < swapChainFramebuffers_.size(); ++i) vkDestroyFramebuffer(device_, swapChainFramebuffers_[i], nullptr);
+	vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()), commandBuffers_.data());
 	vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
 	vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
 	vkDestroyRenderPass(device_, renderPass_, nullptr);
 	for (size_t i = 0; i < swapChainImageViews_.size(); ++i) vkDestroyImageView(device_, swapChainImageViews_[i], nullptr);
 	vkDestroySwapchainKHR(device_, swapchain_, nullptr);
+}
+
+void HelloTriangleApplication::Cleanup() {
+	this->CleanupSwapChain();
+	vkDestroySemaphore(device_, renderFinishedSemaphore_, nullptr);
+	vkDestroySemaphore(device_, imageAvailableSemaphore_, nullptr);
+	vkDestroyCommandPool(device_, commandPool_, nullptr);
 	vkDestroyDevice(device_, nullptr);
 	DestroyDebugReportCallbackEXT(instance_, callback_, nullptr);
 	vkDestroySurfaceKHR(instance_, surface_, nullptr);
@@ -65,7 +71,14 @@ void HelloTriangleApplication::Cleanup() {
 
 void HelloTriangleApplication::DrawFrame() {
 	uint32_t imageIndex = 0;
-	vkAcquireNextImageKHR(device_, swapchain_, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore_, VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(device_, swapchain_, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore_, VK_NULL_HANDLE, &imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		this->RecreateSwapChain();
+		return;
+	} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		throw std::runtime_error("Failed to acquire swap chain image!");
+	}
 
 	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore_ };
 	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore_ };
@@ -81,7 +94,7 @@ void HelloTriangleApplication::DrawFrame() {
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	VkResult result = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
+	result = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
 //	printf("vkQueueSubmit result: %d\n", result);
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to submit draw command buffer!");
 
@@ -98,6 +111,25 @@ void HelloTriangleApplication::DrawFrame() {
 
 	result = vkQueuePresentKHR(presentQueue_, &presentInfo);
 //	printf("vkQueuePresentKHR result: %d\n", result);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		this->RecreateSwapChain();
+	} else if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to present swap chain image!");
+	}
+}
+
+void HelloTriangleApplication::RecreateSwapChain() {
+	vkDeviceWaitIdle(device_);
+
+	this->CleanupSwapChain();
+
+	this->CreateSwapChain();
+	this->CreateImageViews();
+	this->CreateRenderPass();
+	this->CreateGraphicsPipeline();
+	this->CreateFramebuffers();
+	this->CreateCommandBuffers();
 }
 
 
@@ -247,7 +279,10 @@ VkPresentModeKHR HelloTriangleApplication::ChooseSwapPresentMode(const std::vect
 VkExtent2D HelloTriangleApplication::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) return capabilities.currentExtent;
 
-	VkExtent2D actualExtent = { WIDTH, HEIGHT };
+	int width, height;
+	glfwGetWindowSize(window_, &width, &height);
+
+	VkExtent2D actualExtent = { width, height };
 
 	actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 	actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));

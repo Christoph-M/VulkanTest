@@ -83,13 +83,22 @@ private:
 		file.close();
 	}
 
+	static void OnWindowResized(GLFWwindow* window, int width, int height) {
+		if (width == 0 || height == 0) return;
+
+		HelloTriangleApplication* app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+		app->RecreateSwapChain();
+	}
+
 private:
 	void InitWindow();
 	void InitVulkan();
 	void MainLoop();
+	void CleanupSwapChain();
 	void Cleanup();
 
 	void DrawFrame();
+	void RecreateSwapChain();
 
 	bool CheckValidationLayerSupport();
 	bool IsDeviceSuitable(VkPhysicalDevice device);

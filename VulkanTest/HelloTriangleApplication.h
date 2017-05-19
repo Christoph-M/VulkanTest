@@ -107,6 +107,7 @@ private:
 	void CreateLogicalDevice();
 	void CreateSwapChain();
 	void CreateImageViews();
+	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 
 private:
@@ -124,5 +125,6 @@ private:
 	VkFormat swapChainImageFormat_;
 	VkExtent2D swapChainExtent_;
 	std::vector<VkImageView> swapChainImageViews_;
+	VkRenderPass renderPass_;
 	VkPipelineLayout pipelineLayout_;
 };

@@ -32,15 +32,21 @@ void HelloTriangleApplication::InitVulkan() {
 	this->CreateFramebuffers();
 	this->CreateCommandPool();
 	this->CreateCommandBuffers();
+	this->CreateSemaphores();
 }
 
 void HelloTriangleApplication::MainLoop() {
 	while (!glfwWindowShouldClose(window_)) {
 		glfwPollEvents();
+		this->DrawFrame();
 	}
+
+	vkDeviceWaitIdle(device_);
 }
 
 void HelloTriangleApplication::Cleanup() {
+	vkDestroySemaphore(device_, renderFinishedSemaphore_, nullptr);
+	vkDestroySemaphore(device_, imageAvailableSemaphore_, nullptr);
 	vkDestroyCommandPool(device_, commandPool_, nullptr);
 	for (size_t i = 0; i < swapChainFramebuffers_.size(); ++i) vkDestroyFramebuffer(device_, swapChainFramebuffers_[i], nullptr);
 	vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
@@ -54,6 +60,40 @@ void HelloTriangleApplication::Cleanup() {
 	vkDestroyInstance(instance_, nullptr);
 	glfwDestroyWindow(window_);
 	glfwTerminate();
+}
+
+
+void HelloTriangleApplication::DrawFrame() {
+	uint32_t imageIndex = 0;
+	vkAcquireNextImageKHR(device_, swapchain_, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore_, VK_NULL_HANDLE, &imageIndex);
+
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore_ };
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore_ };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSubmitInfo submitInfo = { };
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffers_[imageIndex];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	VkResult result = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to submit draw command buffer!");
+
+	VkSwapchainKHR swapchains[] = { swapchain_ };
+	VkPresentInfoKHR presentInfo = { };
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapchains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr;
+
+	result = vkQueuePresentKHR(presentQueue_, &presentInfo);
 }
 
 
@@ -467,12 +507,22 @@ void HelloTriangleApplication::CreateRenderPass() {
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassInfo = { };
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = 1;
 	renderPassInfo.pAttachments = &colorAttachment;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &dependency;
 
 	VkResult result = vkCreateRenderPass(device_, &renderPassInfo, nullptr, &renderPass_);
 	printf("vkCreateRenderPass result: %d\n", result);
@@ -698,4 +748,16 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 		printf("vkEndCommandBuffer %d result: %d\n", static_cast<int>(i), result);
 		if (result != VK_SUCCESS) throw std::runtime_error("Failed to record command buffer!");
 	}
+}
+
+void HelloTriangleApplication::CreateSemaphores() {
+	VkSemaphoreCreateInfo semaphoreInfo = { };
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkResult result = vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailableSemaphore_);
+	printf("vkCreateSemaphore result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create imageAvailableSemaphore!");
+	result = vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinishedSemaphore_);
+	printf("vkCreateSemaphore result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create renderFinishedSemaphore!");
 }

@@ -89,6 +89,8 @@ private:
 	void MainLoop();
 	void Cleanup();
 
+	void DrawFrame();
+
 	bool CheckValidationLayerSupport();
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
@@ -112,6 +114,7 @@ private:
 	void CreateFramebuffers();
 	void CreateCommandPool();
 	void CreateCommandBuffers();
+	void CreateSemaphores();
 
 private:
 	GLFWwindow* window_;
@@ -134,4 +137,7 @@ private:
 	std::vector<VkFramebuffer> swapChainFramebuffers_;
 	VkCommandPool commandPool_;
 	std::vector<VkCommandBuffer> commandBuffers_;
+	
+	VkSemaphore imageAvailableSemaphore_;
+	VkSemaphore renderFinishedSemaphore_;
 };

@@ -72,6 +72,7 @@ void HelloTriangleApplication::DrawFrame() {
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo submitInfo = { };
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pNext = nullptr;
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
@@ -81,11 +82,13 @@ void HelloTriangleApplication::DrawFrame() {
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
 	VkResult result = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
+//	printf("vkQueueSubmit result: %d\n", result);
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to submit draw command buffer!");
 
 	VkSwapchainKHR swapchains[] = { swapchain_ };
 	VkPresentInfoKHR presentInfo = { };
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.pNext = nullptr;
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 	presentInfo.swapchainCount = 1;
@@ -94,6 +97,7 @@ void HelloTriangleApplication::DrawFrame() {
 	presentInfo.pResults = nullptr;
 
 	result = vkQueuePresentKHR(presentQueue_, &presentInfo);
+//	printf("vkQueuePresentKHR result: %d\n", result);
 }
 
 
@@ -257,6 +261,8 @@ VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<ch
 
 	VkShaderModuleCreateInfo createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
 	createInfo.codeSize = code.size();
 	createInfo.pCode = codeAligned.data();
 
@@ -274,6 +280,7 @@ void HelloTriangleApplication::SetupDebugCallback() {
 
 	VkDebugReportCallbackCreateInfoEXT createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	createInfo.pNext = nullptr;
 	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 	createInfo.pfnCallback = this->DebugCallback;
 	createInfo.pUserData = this;
@@ -303,6 +310,7 @@ void HelloTriangleApplication::CreateInstance() {
 
 	VkApplicationInfo appInfo = { };
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pNext = nullptr;
 	appInfo.pApplicationName = "Hello Triangle";
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "No Engine";
@@ -314,6 +322,8 @@ void HelloTriangleApplication::CreateInstance() {
 
 	VkInstanceCreateInfo createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
 	createInfo.pApplicationInfo = &appInfo;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
@@ -322,6 +332,7 @@ void HelloTriangleApplication::CreateInstance() {
 		createInfo.ppEnabledLayerNames = validationLayers.data();
 	} else {
 		createInfo.enabledLayerCount = 0;
+		createInfo.ppEnabledLayerNames = nullptr;
 	}
 
 	VkResult result = vkCreateInstance(&createInfo, nullptr, &instance_);
@@ -384,6 +395,8 @@ void HelloTriangleApplication::CreateLogicalDevice() {
 	for (int queueFamily : uniqueQueueFamilies) {
 		VkDeviceQueueCreateInfo queueCreateInfo = { };
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.pNext = nullptr;
+		queueCreateInfo.flags = 0;
 		queueCreateInfo.queueFamilyIndex = queueFamily;
 		queueCreateInfo.queueCount = 1;
 		queueCreateInfo.pQueuePriorities = &queuePriority;
@@ -394,6 +407,8 @@ void HelloTriangleApplication::CreateLogicalDevice() {
 
 	VkDeviceCreateInfo createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.pEnabledFeatures = &deviceFeatures;
@@ -404,6 +419,7 @@ void HelloTriangleApplication::CreateLogicalDevice() {
 		createInfo.ppEnabledLayerNames = validationLayers.data();
 	} else {
 		createInfo.enabledLayerCount = 0;
+		createInfo.ppEnabledLayerNames = nullptr;
 	}
 
 	VkResult result = vkCreateDevice(physicalDevice_, &createInfo, nullptr, &device_);
@@ -429,6 +445,8 @@ void HelloTriangleApplication::CreateSwapChain() {
 
 	VkSwapchainCreateInfoKHR createInfo = { };
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.pNext = nullptr;
+	createInfo.flags = 0;
 	createInfo.surface = surface_;
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
@@ -468,6 +486,8 @@ void HelloTriangleApplication::CreateImageViews() {
 	for (size_t i = 0; i < swapChainImages_.size(); ++i) {
 		VkImageViewCreateInfo createInfo = { };
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.pNext = nullptr;
+		createInfo.flags = 0;
 		createInfo.image = swapChainImages_[i];
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		createInfo.format = swapChainImageFormat_;
@@ -489,6 +509,7 @@ void HelloTriangleApplication::CreateImageViews() {
 
 void HelloTriangleApplication::CreateRenderPass() {
 	VkAttachmentDescription colorAttachment = { };
+	colorAttachment.flags = 0;
 	colorAttachment.format = swapChainImageFormat_;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -503,20 +524,30 @@ void HelloTriangleApplication::CreateRenderPass() {
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription subpass = { };
+	subpass.flags = 0;
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.inputAttachmentCount = 0;
+	subpass.pInputAttachments = nullptr;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
+	subpass.pResolveAttachments = nullptr;
+	subpass.pDepthStencilAttachment = nullptr;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pPreserveAttachments = nullptr;
 
-	VkSubpassDependency dependency = {};
+	VkSubpassDependency dependency = { };
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
 	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.srcAccessMask = 0;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependency.dependencyFlags = 0;
 
 	VkRenderPassCreateInfo renderPassInfo = { };
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.pNext = nullptr;
+	renderPassInfo.flags = 0;
 	renderPassInfo.attachmentCount = 1;
 	renderPassInfo.pAttachments = &colorAttachment;
 	renderPassInfo.subpassCount = 1;
@@ -541,20 +572,28 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = { };
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.pNext = nullptr;
+	vertShaderStageInfo.flags = 0;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 	vertShaderStageInfo.module = vertShaderModule;
 	vertShaderStageInfo.pName = "main";
+	vertShaderStageInfo.pSpecializationInfo = nullptr;
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo = { };
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.pNext = nullptr;
+	fragShaderStageInfo.flags = 0;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
+	fragShaderStageInfo.pSpecializationInfo = nullptr;
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.pNext = nullptr;
+	vertexInputInfo.flags = 0;
 	vertexInputInfo.vertexBindingDescriptionCount = 0;
 	vertexInputInfo.pVertexBindingDescriptions = nullptr;
 	vertexInputInfo.vertexAttributeDescriptionCount = 0;
@@ -562,6 +601,8 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = { };
 	inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssemblyInfo.pNext = nullptr;
+	inputAssemblyInfo.flags = 0;
 	inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
@@ -579,6 +620,8 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineViewportStateCreateInfo viewportStateInfo = { };
 	viewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportStateInfo.pNext = nullptr;
+	viewportStateInfo.flags = 0;
 	viewportStateInfo.viewportCount = 1;
 	viewportStateInfo.pViewports = &viewport;
 	viewportStateInfo.scissorCount = 1;
@@ -586,12 +629,15 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineRasterizationStateCreateInfo rasterizerInfo = { };
 	rasterizerInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizerInfo.pNext = nullptr;
+	rasterizerInfo.flags = 0;
 	rasterizerInfo.depthClampEnable = VK_FALSE;
 	rasterizerInfo.rasterizerDiscardEnable = VK_FALSE;
 	rasterizerInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizerInfo.lineWidth = 1.0f;
 	rasterizerInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizerInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizerInfo.depthBiasEnable = VK_FALSE;
 	rasterizerInfo.depthBiasClamp = VK_FALSE;
 	rasterizerInfo.depthBiasConstantFactor = 0.0f;
 	rasterizerInfo.depthBiasClamp = 0.0f;
@@ -599,6 +645,8 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineMultisampleStateCreateInfo multisamplingInfo = { };
 	multisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisamplingInfo.pNext = nullptr;
+	multisamplingInfo.flags = 0;
 	multisamplingInfo.sampleShadingEnable = VK_FALSE;
 	multisamplingInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 	multisamplingInfo.minSampleShading = 1.0f;
@@ -618,6 +666,8 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineColorBlendStateCreateInfo colorBlendingInfo = { };
 	colorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlendingInfo.pNext = nullptr;
+	colorBlendingInfo.flags = 0;
 	colorBlendingInfo.logicOpEnable = VK_FALSE;
 	colorBlendingInfo.logicOp = VK_LOGIC_OP_COPY;
 	colorBlendingInfo.attachmentCount = 1;
@@ -639,6 +689,8 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = { };
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.pNext = nullptr;
+	pipelineLayoutInfo.flags = 0;
 	pipelineLayoutInfo.setLayoutCount = 0;
 	pipelineLayoutInfo.pSetLayouts = nullptr;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
@@ -650,10 +702,13 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 
 	VkGraphicsPipelineCreateInfo pipelineInfo = { };
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.pNext = nullptr;
+	pipelineInfo.flags = 0;
 	pipelineInfo.stageCount = 2;
 	pipelineInfo.pStages = shaderStages;
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+	pipelineInfo.pTessellationState = nullptr;
 	pipelineInfo.pViewportState = &viewportStateInfo;
 	pipelineInfo.pRasterizationState = &rasterizerInfo;
 	pipelineInfo.pMultisampleState = &multisamplingInfo;
@@ -682,6 +737,8 @@ void HelloTriangleApplication::CreateFramebuffers() {
 
 		VkFramebufferCreateInfo framebufferInfo = { };
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.pNext = nullptr;
+		framebufferInfo.flags = 0;
 		framebufferInfo.renderPass = renderPass_;
 		framebufferInfo.attachmentCount = 1;
 		framebufferInfo.pAttachments = attachments;
@@ -700,8 +757,9 @@ void HelloTriangleApplication::CreateCommandPool() {
 
 	VkCommandPoolCreateInfo poolInfo = { };
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.pNext = nullptr;
 	poolInfo.flags = 0;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 
 	VkResult result = vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool_);
 	printf("vkCreateCommandPool result: %d\n", result);
@@ -713,6 +771,7 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 
 	VkCommandBufferAllocateInfo allocateInfo = { };
 	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.pNext = nullptr;
 	allocateInfo.commandPool = commandPool_;
 	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocateInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
@@ -724,6 +783,7 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 	for (size_t i = 0; i < commandBuffers_.size(); ++i) {
 		VkCommandBufferBeginInfo beginInfo = { };
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.pNext = nullptr;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		beginInfo.pInheritanceInfo = nullptr;
 
@@ -732,6 +792,7 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 		VkRenderPassBeginInfo renderPassInfo = { };
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.pNext = nullptr;
 		renderPassInfo.renderPass = renderPass_;
 		renderPassInfo.framebuffer = swapChainFramebuffers_[i];
 		renderPassInfo.renderArea.offset = { 0, 0 };
@@ -753,6 +814,8 @@ void HelloTriangleApplication::CreateCommandBuffers() {
 void HelloTriangleApplication::CreateSemaphores() {
 	VkSemaphoreCreateInfo semaphoreInfo = { };
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	semaphoreInfo.pNext = nullptr;
+	semaphoreInfo.flags = 0;
 
 	VkResult result = vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailableSemaphore_);
 	printf("vkCreateSemaphore result: %d\n", result);

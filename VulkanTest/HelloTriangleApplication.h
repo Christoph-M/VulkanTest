@@ -109,6 +109,7 @@ private:
 	void CreateImageViews();
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
+	void CreateFramebuffers();
 
 private:
 	GLFWwindow* window_;
@@ -127,4 +128,6 @@ private:
 	std::vector<VkImageView> swapChainImageViews_;
 	VkRenderPass renderPass_;
 	VkPipelineLayout pipelineLayout_;
+	VkPipeline graphicsPipeline_;
+	std::vector<VkFramebuffer> swapChainFramebuffers_;
 };

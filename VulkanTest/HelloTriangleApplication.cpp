@@ -29,6 +29,7 @@ void HelloTriangleApplication::InitVulkan() {
 	this->CreateImageViews();
 	this->CreateRenderPass();
 	this->CreateGraphicsPipeline();
+	this->CreateFramebuffers();
 }
 
 void HelloTriangleApplication::MainLoop() {
@@ -38,6 +39,8 @@ void HelloTriangleApplication::MainLoop() {
 }
 
 void HelloTriangleApplication::Cleanup() {
+	for (size_t i = 0; i < swapChainFramebuffers_.size(); ++i) vkDestroyFramebuffer(device_, swapChainFramebuffers_[i], nullptr);
+	vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
 	vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
 	vkDestroyRenderPass(device_, renderPass_, nullptr);
 	for (size_t i = 0; i < swapChainImageViews_.size(); ++i) vkDestroyImageView(device_, swapChainImageViews_[i], nullptr);
@@ -592,6 +595,49 @@ void HelloTriangleApplication::CreateGraphicsPipeline() {
 	printf("vkCreatePipelineLayout result: %d\n", result);
 	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create pipeline layout!");
 
+	VkGraphicsPipelineCreateInfo pipelineInfo = { };
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+	pipelineInfo.pViewportState = &viewportStateInfo;
+	pipelineInfo.pRasterizationState = &rasterizerInfo;
+	pipelineInfo.pMultisampleState = &multisamplingInfo;
+	pipelineInfo.pDepthStencilState = nullptr;
+	pipelineInfo.pColorBlendState = &colorBlendingInfo;
+	pipelineInfo.pDynamicState = nullptr;
+	pipelineInfo.layout = pipelineLayout_;
+	pipelineInfo.renderPass = renderPass_;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex = -1;
+
+	result = vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline_);
+	printf("vkCreateGraphicsPipelines result: %d\n", result);
+	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create graphics pipeline!");
+
 	vkDestroyShaderModule(device_, fragShaderModule, nullptr);
 	vkDestroyShaderModule(device_, vertShaderModule, nullptr);
+}
+
+void HelloTriangleApplication::CreateFramebuffers() {
+	swapChainFramebuffers_.resize(swapChainImageViews_.size());
+
+	for (size_t i = 0; i < swapChainImageViews_.size(); ++i) {
+		VkImageView attachments[] = { swapChainImageViews_[i] };
+
+		VkFramebufferCreateInfo framebufferInfo = { };
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass_;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = swapChainExtent_.width;
+		framebufferInfo.height = swapChainExtent_.height;
+		framebufferInfo.layers = 1;
+
+		VkResult result = vkCreateFramebuffer(device_, &framebufferInfo, nullptr, &swapChainFramebuffers_[i]);
+		printf("vkCreateFramebuffer %d result: %d\n", static_cast<int>(i), result);
+		if (result != VK_SUCCESS) throw std::runtime_error("Failed to create framebuffer!");
+	}
 }
